@@ -95,51 +95,67 @@ module Cardinal
   
   
   
-	#
-	# Bayes inheritance
-	#
-	class BayesData < Bishop::BayesData
+		#
+		# Bayes inheritance
+		#
+		class BayesData < Bishop::BayesData
 		
-		def get_closest_match_for(word, threshold=2)
-			if @data.has_key? word
-				return [word, @data[word]]
-			else
-				ld_array = []
-				@data.each do |entry,freq|
-					ld = Cardinal.levenshtein_distance(word, entry)
-					# Return Match if it has a distance of 1
-					if ld == 1
-						return [entry, @data[entry]]
-					else
-						ld_array.push([ld,entry])
-					end
-				end
-				# Return closest match if not greater than threshold else return nil
-				ld_array = ld_array.sort
-				if ld_array[0][0] <= threshold
-					return [ld_array[0][1], @data[ld_array[0][1]]] 
+			def get_closest_match_for(word, threshold=2)
+				if @data.has_key? word
+					return [word, @data[word]]
 				else
-					return nil
+					ld_array = []
+					@data.each do |entry,freq|
+						ld = Cardinal.levenshtein_distance(word, entry)
+						# Return Match if it has a distance of 1
+						if ld == 1
+							return [entry, @data[entry]]
+						else
+							ld_array.push([ld,entry])
+						end
+					end
+					# Return closest match if not greater than threshold else return nil
+					ld_array = ld_array.sort
+					if ld_array[0][0] <= threshold
+						return [ld_array[0][1], @data[ld_array[0][1]]] 
+					else
+						return nil
+					end
 				end
 			end
 		end
-	end
 	
 	
 	
-	#
-	# BayesResult - Holds information about Result
-	#
+		#
+		# BayesResult - Holds information about Result
+		#
   	class BayesResult < Hash
-  		def initialize(msg, results)
-  			self[:message] = msg
-  			best_guess = results.sort{|x,y| y[1] <=> x[1]}
-  			self[:best_guess] = [best_guess[0][0],best_guess[0][1]]
-  			self[:probabilites]= {}
-  			results.each do |result|
-  				self[:probabilites][result[0]]= result[1]
-  			end
+  		def initialize(msg, results, kernel)
+				self[:kernel] = kernel  			
+				self[:message] = msg
+				unless results.empty?
+  				best_guess = results.sort{|x,y| y[1] <=> x[1]}
+  				self[:best_guess] = [best_guess[0][0],best_guess[0][1]]
+  				self[:probabilites]= {}
+  				results.each do |result|
+  					self[:probabilites][result[0]]= result[1]
+  				end
+				else
+					self[:best_guess] = nil
+				end
   		end
+
+			def feedback(value)
+				if value == true
+					self[:kernel].train( self[:best_guess][0], self[:message] )
+				elsif value == false
+					self[:kernel].untrain( self[:best_guess][0], self[:message] )
+				else
+					self[:kernel].untrain( self[:best_guess][0], self[:message] )
+					self[:kernel].train( value.to_s, self[:message] )
+				end
+			end
   	end
   
   
@@ -198,10 +214,9 @@ module Cardinal
 		end
 		
 		#
-	  	# Export interface for the pools data
-	  	#
-	  	
-	  	# Exports the data in the pools
+	  # Export interface for the pools data
+	  #
+	  # Exports the data in the pools
 		def export_pools_data( file )
 		  	File.open( file, 'w' ) { |f| YAML.dump( self.pools, f ) }
 		end
@@ -223,19 +238,33 @@ module Cardinal
 		
 		# Extends Guessing Interface - Returns a Guess Hash with more information
 		def guess(string)
-			result = BayesResult.new(string, super(string))
+			result = BayesResult.new(string, super(string), kernel=self)
+		end
+		
+		# Calls guess for every token in the string
+		def latent_semantic_indexing(string)
+			lsimap = []
+			@tokenizer.tokenize(string).each do |token|
+				lsimap.push( guess(token) )
+			end
+			return lsimap
 		end
 		
 		# Override get_props: not existing words should return closest levenstein match (1..cutoff)
 		def get_probs( pool, words )
 			if @levenshtein_mode
-		  		return words.map { |word| pool.get_closest_match_for(word) }.compact.sort
-		  	else
-		  		return super( pool, words )
-		  	end
+		  	return words.map { |word| pool.get_closest_match_for(word) }.compact.sort
+		  else
+		  	return super( pool, words )
+		  end
 		end
 	end
 	
+
+
+	#
+	# Module Functions
+	#
 	# Calculates Levenshtein Distance for s to t; the numbers of operations getting from s to t
 	def self.levenshtein_distance(s, t)
 		m = s.length
