@@ -14,7 +14,7 @@ class Object
 	# General Marshalling Methods
 	#
 	
-	# Save Object
+	# Save an Object
 	def save(filename=nil)
 		@marshal_filename = filename if filename
 		data = Marshal.dump(self)
