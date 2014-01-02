@@ -14,7 +14,7 @@ class Object
 	# General Marshalling Methods
 	#
 	
-	# Save Object
+	# Save an Object
 	def save(filename=nil)
 		@marshal_filename = filename if filename
 		data = Marshal.dump(self)
@@ -95,41 +95,41 @@ module Cardinal
   
   
   
-		#
-		# Bayes inheritance
-		#
-		class BayesData < Bishop::BayesData
-		
-			def get_closest_match_for(word, threshold=2)
-				if @data.has_key? word
-					return [word, @data[word]]
-				else
-					ld_array = []
-					@data.each do |entry,freq|
-						ld = Cardinal.levenshtein_distance(word, entry)
-						# Return Match if it has a distance of 1
-						if ld == 1
-							return [entry, @data[entry]]
-						else
-							ld_array.push([ld,entry])
-						end
-					end
-					# Return closest match if not greater than threshold else return nil
-					ld_array = ld_array.sort
-					if ld_array[0][0] <= threshold
-						return [ld_array[0][1], @data[ld_array[0][1]]] 
+	#
+	# Bayes inheritance
+	#
+	class BayesData < Bishop::BayesData
+	
+		def get_closest_match_for(word, threshold=2)
+			if @data.has_key? word
+				return [word, @data[word]]
+			else
+				ld_array = []
+				@data.each do |entry,freq|
+					ld = Cardinal.levenshtein_distance(word, entry)
+					# Return Match if it has a distance of 1
+					if ld == 1
+						return [entry, @data[entry]]
 					else
-						return nil
+						ld_array.push([ld,entry])
 					end
+				end
+				# Return closest match if not greater than threshold else return nil
+				ld_array = ld_array.sort
+				if ld_array[0][0] <= threshold
+					return [ld_array[0][1], @data[ld_array[0][1]]] 
+				else
+					return nil
 				end
 			end
 		end
+	end
 	
 	
 	
-		#
-		# BayesResult - Holds information about Result
-		#
+	#
+	# BayesResult - Holds information about Result
+	#
   	class BayesResult < Hash
   		def initialize(msg, results, kernel)
 				self[:kernel] = kernel  			
@@ -145,17 +145,17 @@ module Cardinal
 					self[:best_guess] = nil
 				end
   		end
-
-			def feedback(value)
-				if value == true
-					self[:kernel].train( self[:best_guess][0], self[:message] )
-				elsif value == false
-					self[:kernel].untrain( self[:best_guess][0], self[:message] )
-				else
-					self[:kernel].untrain( self[:best_guess][0], self[:message] )
-					self[:kernel].train( value.to_s, self[:message] )
-				end
+		# Method to initiate the feedback loop to the kernel	
+		def feedback(value)
+			if value == true
+				self[:kernel].train( self[:best_guess][0], self[:message] )
+			elsif value == false
+				self[:kernel].untrain( self[:best_guess][0], self[:message] )
+			else
+				self[:kernel].untrain( self[:best_guess][0], self[:message] )
+				self[:kernel].train( value.to_s, self[:message] )
 			end
+		end
   	end
   
   
@@ -165,7 +165,7 @@ module Cardinal
 	class Tokenizer < Bishop::Tokenizer
 		attr_accessor = :character_blacklist, :word_blacklist, :max_word_length
 		def initialize()
-			@character_blacklist = /[+*~]/
+			@character_blacklist = //#/[+*~.:,;#?!]/
 			@word_blacklist = []
 			@max_word_length = 50
 		end
@@ -214,9 +214,9 @@ module Cardinal
 		end
 		
 		#
-	  # Export interface for the pools data
-	  #
-	  # Exports the data in the pools
+	  	# Export interface for the pools data
+	  	#
+	  	# Exports the data in the pools
 		def export_pools_data( file )
 		  	File.open( file, 'w' ) { |f| YAML.dump( self.pools, f ) }
 		end
@@ -242,6 +242,7 @@ module Cardinal
 		end
 		
 		# Calls guess for every token in the string
+		# Returns a latent semantic index array
 		def latent_semantic_indexing(string)
 			lsimap = []
 			@tokenizer.tokenize(string).each do |token|
@@ -253,15 +254,276 @@ module Cardinal
 		# Override get_props: not existing words should return closest levenstein match (1..cutoff)
 		def get_probs( pool, words )
 			if @levenshtein_mode
-		  	return words.map { |word| pool.get_closest_match_for(word) }.compact.sort
-		  else
-		  	return super( pool, words )
+		  		return words.map { |word| pool.get_closest_match_for(word) }.compact.sort
+		  	else
+		  		return super( pool, words )
 		  end
 		end
 	end
 	
-
-
+	
+	
+	#
+	# Bayes Pattern Recognition Kernel
+	#
+	class BayesPatternRecognitionKernel
+		def initialize()
+		end
+	end
+	
+	
+	
+	#
+	# Markov State Implementation
+	#
+	class MarkovStates < Hash
+		def initialize()
+			super
+		end
+		def train(source,target)
+			if self.has_key?(source)
+				if self[source].has_key?(target)
+					self[source][target]+=1
+				else
+					self[source][target]=1
+				end
+			else
+				self[source]= {target=>1}
+			end
+		end
+		def untrain(source,target)
+			if self.has_key?(source) and self[source].has_key?(target) 
+				self[source][target]-=1
+				if self[source][target] <= 0
+					self[source].delete(target)
+				end
+				if self[source].empty?
+					self.delete(source)
+				end
+			end
+		end
+		
+		# Returns a Hash of probabilities for source; nil if source not present
+		def probabilities_for(source)
+			if self.has_key?(source)
+				total = self[source].values.inject(:+).to_f
+				return Hash[*self[source].map{|key,value| [key,value/total] }.flatten]
+			end
+			return nil
+		end
+		
+		# Returns the probability for source => target; nil if none found
+		def probability_for(source, target)
+			next_states = probabilities_for(source)
+			unless next_states.nil?
+				return next_states[target]
+			end
+			return nil
+		end
+		
+		# Returns the next state for source
+		def next_state_for(source)
+			return probabilities_for(source).sort[0][0]
+		end
+	end
+	
+	
+	
+	#
+	# Markov Chain Implementation
+	#
+	class MarkovKernel
+	
+		attr_reader :name, :markovproperty
+		attr_accessor :states
+		
+		def initialize(name, separator = ' ', markovproperty=true)
+			@name = name
+			@separator = separator
+			@markovproperty = markovproperty
+			@states = MarkovStates.new()
+		end
+		
+		# Returns Array of probabilities for a string
+		def match_probabilities(string)
+			match_probabilities = []
+			sequence = string.split(@separator).push(nil)
+			sequence.each_index do |index|
+				unless sequence[index].nil?
+					match_probabilities.push( @states.probability_for(sequence[index], sequence[index+1]) )
+				end
+			end
+			return match_probabilities
+		end
+		
+		# Returns the Average of the probabilities of the match
+		def match(string)
+			probabilities = match_probabilities(string)
+			return probabilities.inject(:+).to_f/probabilities.size
+		end
+		
+		# Trains a sequence of states
+		def train(string)
+			sequence = string.split(@separator).push(nil)
+			sequence.each_index do |index|
+				unless sequence[index].nil?
+					@states.train(sequence[index],sequence[index+1])
+				end
+			end
+		end
+		
+		# Untrains a sequence of states
+		def untrain(string)
+			sequence = string.split(@separator).push(nil)
+			sequence.each_index do |index|
+				unless sequence[index].nil?
+					@states.untrain(sequence[index],sequence[index+1])
+				end
+			end
+		end
+	end
+	
+	
+	
+	
+	class Context < MarkovKernel
+		# Returns smooth moving probability regions of markov realizations (left to right)
+		def moving_probabilities(source, sensitivity=0.33)
+			potential = 0.0
+			moving_match = []
+			match_probabilities(source).each do |prob|
+				if prob.nil?
+					potential-= sensitivity
+					if potential < 0.0 then potential = 0.0 end
+				else
+					potential+= prob
+				end
+				moving_match.push(potential)
+			end
+			return moving_match
+		end
+		# Returns smooth moving probability regions of reverse markov realizations (right to left)
+		def reverse_moving_probabilities(source, sensitivity=0.33)
+			return moving_probabilities(source.reverse, sensitivity).reverse
+		end
+		
+		# Returns 
+		def cumulative_markers(source)
+			match_probabilities = match_probabilities(source).map{|x| x.nil? ? 0.0 : x}
+			markers = []
+			marker_potential = 0.0
+			match_probabilities.each_with_index do |prob,index|
+				if match_probabilities[index+1].nil? or match_probabilities[index+1] <= 0.0
+					marker_potential+= prob
+					markers[index] = marker_potential
+					marker_potential= 0.0
+				else
+					marker_potential+= prob
+					markers[index] = 0.0
+				end
+			end
+			return markers
+		end
+		def reverse_cumulative_markers(source)
+			return cumulative_markers(source.reverse).reverse
+		end
+	end
+	
+	class ContextPatternRecognition
+	
+		attr_accessor :sensitivity
+		
+		def initialize(name, separator = '')
+			@name = name
+			@separator = separator
+			@sensitivity = 0.33
+			@left_context = Context.new("left", @separator)
+			@right_context = Context.new("right", @separator)
+			@target = Context.new("target", @separator)
+		end
+		def train(source, target)
+			decomposed_source = source.split(target)
+			@left_context.train(decomposed_source[0])
+			@right_context.train(decomposed_source[1])
+			@target.train(target)
+		end
+		def untrain(source, target)
+			decomposed_source = source.split(target)
+			@left_context.untrain(decomposed_source[0])
+			@right_context.untrain(decomposed_source[1])
+			@target.untrain(target)
+		end
+		
+		# Returns left and right gravity distributions (high values indicate probable cutoff)
+		def moving_match_gravities(source)
+			left_gravity = []
+			right_gravity = []
+			
+			left_moving_match = @left_context.moving_probabilities(source,@sensitivity)
+			left_target_moving_match = @target.reverse_moving_probabilities(source,@sensitivity)
+			right_target_moving_match = @target.moving_probabilities(source,@sensitivity)
+			right_moving_match = @right_context.reverse_moving_probabilities(source,@sensitivity)
+			
+			left_moving_match.each_index{|index| left_gravity[index]= left_moving_match[index]+left_target_moving_match[index]}
+			right_moving_match.each_index{|index| right_gravity[index]= right_moving_match[index]+right_target_moving_match[index]}
+			
+			return left_gravity, right_gravity
+		end
+		
+		
+		
+		def match(source)
+			"""
+			left_markers = @left_context.cumulative_markers(source)
+			left_target_markers = @target.reverse_cumulative_markers(source)
+			right_target_markers = @target.cumulative_markers(source)
+			right_markers = @right_context.reverse_cumulative_markers(source)
+			"""
+			
+			
+			
+			
+			
+			
+			"""
+			target_gravity = []
+			left_target_moving_match.each_index{|index|target_gravity[index]=left_target_moving_match[index]-right_target_moving_match[index]}
+			
+			left_gravity = []
+			left_moving_match.each_index{|index|left_gravity[index]=left_moving_match[index]-right_moving_match[index]}
+			left_gravity.map!{|x| x < 0.0 ? 0.0 : x}
+			
+			right_gravity = []
+			right_moving_match.each_index{|index|right_gravity[index]=right_moving_match[index]-left_moving_match[index]}
+			right_gravity.map!{|x| x < 0.0 ? 0.0 : x}
+			"""
+			left_gravity, right_gravity = moving_match_gravities(source)
+			
+			source.split(@separator).each_with_index do |token,index|
+				puts "#{token} => #{left_gravity[index]} ### #{right_gravity[index]}"
+				#puts "#{token} => #{left_markers[index]} ### #{left_target_markers[index]} ||| #{right_target_markers[index]} ### #{right_markers[index]}"
+			end
+			
+			left_marker = left_gravity.sort[-1]
+			right_marker = right_gravity.sort[-1]
+			if left_marker > right_marker
+				left_marker = [left_gravity.index(left_marker),left_marker]
+				right_marker = right_gravity[left_marker[0]..-1].sort[-1]
+				right_marker = [right_gravity[left_marker[0]..-1].index(right_marker),right_marker]
+			else
+				right_marker = [right_gravity.index(right_marker),right_marker]
+				left_marker = left_gravity[0..right_marker[0]].sort[-1]
+				left_marker = [left_gravity[0..right_marker[0]].index(left_marker),left_marker]
+			end
+			
+			
+			
+			puts source
+			puts [left_marker,right_marker,source.split(@separator)[left_marker[0]..right_marker[0]].join(@separator) ].inspect
+		end
+	end
+	    
+	    
 	#
 	# Module Functions
 	#
@@ -291,5 +553,24 @@ module Cardinal
   
 end
 
+#"Its peak is 8,848 metres (29,029 ft) above sea level"
+#"With a peak elevation of 8,611 m (28,251 feet), K2 is the highest point of the Karakoram Range and the highest point in Pakistan."
+#"It rises with an elevation of 8,586 m (28,169 ft) in a section of the Himalayas called Kangchenjunga Himal."
+
+source = ""
+with a summit elevation of 8,126 metres (26,660 ft).
+#"8,516 metres"
+
+test = Cardinal::ContextPatternRecognition.new("test",'')
+test.train "Its peak is 8,848 metres (29,029 ft) above sea level", "8,848 metres"
+test.train "peak elevation of 8,611 m (28,251 feet), K2 is the highest point", "8,611 m"
+test.train "It rises with an elevation of 8,586 m (28,169 ft) in a section of the Himalayas", "8,586 m"
+test.train "fifth highest mountain in the world at 8,481 metres (27,825 ft).", "8,481 metres"
+test.train "sixth highest mountain in the world at 8,201 metres (26,906 ft) above sea level.", "8,201 metres"
+test.train "at 8,167 metres (26,795 ft)", "8,167 metres"
+test.train "at 8,156 metres (26,759 ft) above mean sea level (m.s.l) is the highest peak", "8,156 metres"
+test.train "In addition to the main summit at 8,516 metres (27,940 ft) above sea level", "8,516 metres"
+puts test.inspect
+test.match(source)
 
 
