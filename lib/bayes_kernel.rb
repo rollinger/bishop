@@ -447,11 +447,16 @@ module Cardinal
 			@right_context.train(decomposed_source[1])
 			@target.train(target)
 		end
-		def untrain(source, target)
-			decomposed_source = source.split(target)
-			@left_context.untrain(decomposed_source[0])
-			@right_context.untrain(decomposed_source[1])
-			@target.untrain(target)
+		def untrain(source, target=nil)
+			if target
+				decomposed_source = source.split(target)
+				@left_context.untrain(decomposed_source[0])
+				@right_context.untrain(decomposed_source[1])
+				@target.untrain(target)
+			else
+				@left_context.untrain(source)
+				@right_context.untrain(source)
+			end
 		end
 		
 		# Returns left and right gravity distributions (high values indicate probable cutoff)
@@ -509,7 +514,7 @@ module Cardinal
 			if left_marker > right_marker
 				left_marker = [left_gravity.index(left_marker),left_marker]
 				right_marker = right_gravity[left_marker[0]..-1].sort[-1]
-				right_marker = [right_gravity[left_marker[0]..-1].index(right_marker),right_marker]
+				right_marker = [right_gravity[left_marker[0]..-1].index(right_marker)+left_marker[0],right_marker]
 			else
 				right_marker = [right_gravity.index(right_marker),right_marker]
 				left_marker = left_gravity[0..right_marker[0]].sort[-1]
@@ -557,8 +562,7 @@ end
 #"With a peak elevation of 8,611 m (28,251 feet), K2 is the highest point of the Karakoram Range and the highest point in Pakistan."
 #"It rises with an elevation of 8,586 m (28,169 ft) in a section of the Himalayas called Kangchenjunga Himal."
 
-source = "with a summit elevation of 8,126 metres (26,660 ft)."
-#"8,516 metres"
+source = "is the fourteenth-highest mountain in the world and, at 8,013 m (26,289 ft), the lowest of the eight-thousanders. " 
 
 test = Cardinal::ContextPatternRecognition.new("test",'')
 test.train "Its peak is 8,848 metres (29,029 ft) above sea level", "8,848 metres"
@@ -569,6 +573,11 @@ test.train "sixth highest mountain in the world at 8,201 metres (26,906 ft) abov
 test.train "at 8,167 metres (26,795 ft)", "8,167 metres"
 test.train "at 8,156 metres (26,759 ft) above mean sea level (m.s.l) is the highest peak", "8,156 metres"
 test.train "In addition to the main summit at 8,516 metres (27,940 ft) above sea level", "8,516 metres"
+test.train "with a summit elevation of 8,126 metres (26,660 ft) above sea level", "8,126 metres"
+test.train "includes 8,091 m (26,545 ft) ", "8,091 m"
+test.untrain "As of the end of 2009, there had been 157 summit ascents of Annapurna I, and 60 climbing fatalities on the mountain." 
+test.train "with an elevation of 8,051 metres (26,414 ft). ", "8,051 m"
+test.train "China. At 8,034 metres (26,358 ft) high,", "8,034 metres"
 puts test.inspect
 test.match(source)
 
