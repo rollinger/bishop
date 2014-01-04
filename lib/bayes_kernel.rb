@@ -345,12 +345,12 @@ module Cardinal
 		end
 		
 		# Returns Array of probabilities for a string
-		def match_probabilities(string)
+		def match_probabilities(string, index_shift=[0,1])
 			match_probabilities = []
 			sequence = string.split(@separator).push(nil)
 			sequence.each_index do |index|
 				unless sequence[index].nil?
-					match_probabilities.push( @states.probability_for(sequence[index], sequence[index+1]) )
+					match_probabilities.push( @states.probability_for(sequence[index+index_shift[0]], sequence[index+index_shift[1]]) )
 				end
 			end
 			return match_probabilities
@@ -475,8 +475,7 @@ module Cardinal
 			return left_gravity, right_gravity
 		end
 		
-		
-		
+		# Returns the match Result	
 		def match(source)
 			left_gravity, right_gravity = moving_match_gravities(source)
 			
