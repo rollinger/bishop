@@ -478,39 +478,11 @@ module Cardinal
 		
 		
 		def match(source)
-			"""
-			left_markers = @left_context.cumulative_markers(source)
-			left_target_markers = @target.reverse_cumulative_markers(source)
-			right_target_markers = @target.cumulative_markers(source)
-			right_markers = @right_context.reverse_cumulative_markers(source)
-			"""
-			
-			
-			
-			
-			
-			
-			"""
-			target_gravity = []
-			left_target_moving_match.each_index{|index|target_gravity[index]=left_target_moving_match[index]-right_target_moving_match[index]}
-			
-			left_gravity = []
-			left_moving_match.each_index{|index|left_gravity[index]=left_moving_match[index]-right_moving_match[index]}
-			left_gravity.map!{|x| x < 0.0 ? 0.0 : x}
-			
-			right_gravity = []
-			right_moving_match.each_index{|index|right_gravity[index]=right_moving_match[index]-left_moving_match[index]}
-			right_gravity.map!{|x| x < 0.0 ? 0.0 : x}
-			"""
 			left_gravity, right_gravity = moving_match_gravities(source)
-			
-			source.split(@separator).each_with_index do |token,index|
-				puts "#{token} => #{left_gravity[index]} ### #{right_gravity[index]}"
-				#puts "#{token} => #{left_markers[index]} ### #{left_target_markers[index]} ||| #{right_target_markers[index]} ### #{right_markers[index]}"
-			end
 			
 			left_marker = left_gravity.sort[-1]
 			right_marker = right_gravity.sort[-1]
+			
 			if left_marker > right_marker
 				left_marker = [left_gravity.index(left_marker),left_marker]
 				right_marker = right_gravity[left_marker[0]..-1].sort[-1]
@@ -521,10 +493,7 @@ module Cardinal
 				left_marker = [left_gravity[0..right_marker[0]].index(left_marker),left_marker]
 			end
 			
-			
-			
-			puts source
-			puts [left_marker,right_marker,source.split(@separator)[left_marker[0]..right_marker[0]].join(@separator) ].inspect
+			return [ left_marker,right_marker,source.split(@separator)[left_marker[0]..right_marker[0]].join(@separator) ]
 		end
 	end
 	    
@@ -558,27 +527,6 @@ module Cardinal
   
 end
 
-#"Its peak is 8,848 metres (29,029 ft) above sea level"
-#"With a peak elevation of 8,611 m (28,251 feet), K2 is the highest point of the Karakoram Range and the highest point in Pakistan."
-#"It rises with an elevation of 8,586 m (28,169 ft) in a section of the Himalayas called Kangchenjunga Himal."
 
-source = "is the fourteenth-highest mountain in the world and, at 8,013 m (26,289 ft), the lowest of the eight-thousanders. " 
-
-test = Cardinal::ContextPatternRecognition.new("test",'')
-test.train "Its peak is 8,848 metres (29,029 ft) above sea level", "8,848 metres"
-test.train "peak elevation of 8,611 m (28,251 feet), K2 is the highest point", "8,611 m"
-test.train "It rises with an elevation of 8,586 m (28,169 ft) in a section of the Himalayas", "8,586 m"
-test.train "fifth highest mountain in the world at 8,481 metres (27,825 ft).", "8,481 metres"
-test.train "sixth highest mountain in the world at 8,201 metres (26,906 ft) above sea level.", "8,201 metres"
-test.train "at 8,167 metres (26,795 ft)", "8,167 metres"
-test.train "at 8,156 metres (26,759 ft) above mean sea level (m.s.l) is the highest peak", "8,156 metres"
-test.train "In addition to the main summit at 8,516 metres (27,940 ft) above sea level", "8,516 metres"
-test.train "with a summit elevation of 8,126 metres (26,660 ft) above sea level", "8,126 metres"
-test.train "includes 8,091 m (26,545 ft) ", "8,091 m"
-test.untrain "As of the end of 2009, there had been 157 summit ascents of Annapurna I, and 60 climbing fatalities on the mountain." 
-test.train "with an elevation of 8,051 metres (26,414 ft). ", "8,051 m"
-test.train "China. At 8,034 metres (26,358 ft) high,", "8,034 metres"
-puts test.inspect
-test.match(source)
 
 

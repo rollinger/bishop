@@ -16,7 +16,7 @@ require_relative 'lib/bayes_kernel.rb'
 #
 # Start of Session:
 # > test = Cardinal::BayesKernel.load('data/sensory_dimensions_in_semantics')
-# > save(extract,'emails_to_2013');0
+# > test.export_pools_data( 'data/sensory_dimensions_in_semantics_data')
 # > old_extract = load('emails_to_2013');0
 def save(object, filename)
 	data = Marshal.dump(object)

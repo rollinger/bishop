@@ -8,6 +8,7 @@
 # Include Statements
 require 'irb'
 require_relative 'lib/bayes_kernel.rb'
+require_relative 'lib/mantra_kernel.rb'
 
 
 """
