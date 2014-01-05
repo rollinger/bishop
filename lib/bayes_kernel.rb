@@ -491,7 +491,8 @@ module Cardinal
 				left_marker = left_gravity[0..right_marker[0]].sort[-1]
 				left_marker = [left_gravity[0..right_marker[0]].index(left_marker),left_marker]
 			end
-			return [left_marker,right_marker,source.split(@separator)[left_marker[0]..right_marker[0]].join(@separator) ]
+			
+			return [ left_marker,right_marker,source.split(@separator)[left_marker[0]..right_marker[0]].join(@separator) ]
 		end
 	end
 	
@@ -535,27 +536,6 @@ module Cardinal
   
 end
 
-#"Its peak is 8,848 metres (29,029 ft) above sea level"
-#"With a peak elevation of 8,611 m (28,251 feet), K2 is the highest point of the Karakoram Range and the highest point in Pakistan."
-#"It rises with an elevation of 8,586 m (28,169 ft) in a section of the Himalayas called Kangchenjunga Himal."
 
-source = "is the fourteenth-highest mountain in the world and, at 8,013 m (26,289 ft), the lowest of the eight-thousanders. " 
-
-test = Cardinal::ContextPatternRecognition.new("test",'')
-test.train "Its peak is 8,848 metres (29,029 ft) above sea level", "8,848 metres"
-test.train "peak elevation of 8,611 m (28,251 feet), K2 is the highest point", "8,611 m"
-test.train "It rises with an elevation of 8,586 m (28,169 ft) in a section of the Himalayas", "8,586 m"
-test.train "fifth highest mountain in the world at 8,481 metres (27,825 ft).", "8,481 metres"
-test.train "sixth highest mountain in the world at 8,201 metres (26,906 ft) above sea level.", "8,201 metres"
-test.train "at 8,167 metres (26,795 ft)", "8,167 metres"
-test.train "at 8,156 metres (26,759 ft) above mean sea level (m.s.l) is the highest peak", "8,156 metres"
-test.train "In addition to the main summit at 8,516 metres (27,940 ft) above sea level", "8,516 metres"
-test.train "with a summit elevation of 8,126 metres (26,660 ft) above sea level", "8,126 metres"
-test.train "includes 8,091 m (26,545 ft) ", "8,091 m"
-test.untrain "As of the end of 2009, there had been 157 summit ascents of Annapurna I, and 60 climbing fatalities on the mountain." 
-test.train "with an elevation of 8,051 metres (26,414 ft). ", "8,051 m"
-test.train "China. At 8,034 metres (26,358 ft) high,", "8,034 metres"
-puts test.inspect
-test.match(source)
 
 

@@ -10,6 +10,7 @@ require 'irb'
 require_relative 'lib/bayes_kernel.rb'
 require_relative 'lib/mantra_kernel.rb'
 
+
 """
 #
 # IRB Utility Functions

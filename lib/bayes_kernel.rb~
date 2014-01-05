@@ -491,7 +491,8 @@ module Cardinal
 				left_marker = left_gravity[0..right_marker[0]].sort[-1]
 				left_marker = [left_gravity[0..right_marker[0]].index(left_marker),left_marker]
 			end
-			return [left_marker,right_marker,source.split(@separator)[left_marker[0]..right_marker[0]].join(@separator) ]
+			
+			return [ left_marker,right_marker,source.split(@separator)[left_marker[0]..right_marker[0]].join(@separator) ]
 		end
 	end
 	
