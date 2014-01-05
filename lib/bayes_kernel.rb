@@ -477,39 +477,11 @@ module Cardinal
 		
 		# Returns the match Result	
 		def match(source)
-			"""
-			left_markers = @left_context.cumulative_markers(source)
-			left_target_markers = @target.reverse_cumulative_markers(source)
-			right_target_markers = @target.cumulative_markers(source)
-			right_markers = @right_context.reverse_cumulative_markers(source)
-			"""
-			
-			
-			
-			
-			
-			
-			"""
-			target_gravity = []
-			left_target_moving_match.each_index{|index|target_gravity[index]=left_target_moving_match[index]-right_target_moving_match[index]}
-			
-			left_gravity = []
-			left_moving_match.each_index{|index|left_gravity[index]=left_moving_match[index]-right_moving_match[index]}
-			left_gravity.map!{|x| x < 0.0 ? 0.0 : x}
-			
-			right_gravity = []
-			right_moving_match.each_index{|index|right_gravity[index]=right_moving_match[index]-left_moving_match[index]}
-			right_gravity.map!{|x| x < 0.0 ? 0.0 : x}
-			"""
 			left_gravity, right_gravity = moving_match_gravities(source)
-			
-			source.split(@separator).each_with_index do |token,index|
-				puts "#{token} => #{left_gravity[index]} ### #{right_gravity[index]}"
-				#puts "#{token} => #{left_markers[index]} ### #{left_target_markers[index]} ||| #{right_target_markers[index]} ### #{right_markers[index]}"
-			end
 			
 			left_marker = left_gravity.sort[-1]
 			right_marker = right_gravity.sort[-1]
+			
 			if left_marker > right_marker
 				left_marker = [left_gravity.index(left_marker),left_marker]
 				right_marker = right_gravity[left_marker[0]..-1].sort[-1]
@@ -519,14 +491,20 @@ module Cardinal
 				left_marker = left_gravity[0..right_marker[0]].sort[-1]
 				left_marker = [left_gravity[0..right_marker[0]].index(left_marker),left_marker]
 			end
-			
-			
-			
-			puts source
-			puts [left_marker,right_marker,source.split(@separator)[left_marker[0]..right_marker[0]].join(@separator) ].inspect
+			return [left_marker,right_marker,source.split(@separator)[left_marker[0]..right_marker[0]].join(@separator) ]
 		end
 	end
-	    
+	
+	
+	
+	# 
+	class PlatoMultiVectorKernel
+		def initialize()
+			@library = []
+			@
+		end
+	end
+	
 	    
 	#
 	# Module Functions
