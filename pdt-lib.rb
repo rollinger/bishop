@@ -400,7 +400,8 @@ private
         print_system_variables
         puts
       end
-
+      cmd = gets()
+      puts "@daemon.add_rule(#{cmd})"
     end
 
   private
