@@ -349,11 +349,20 @@ module ProbabilisticDecisionTree
       #
       # Class Method that returns the complete unmarshaled Object
       #
-      obj = nil
-      File.open(filename, "r") do |file|
-        obj = Marshal.load(file)
+      begin
+        obj = nil
+        File.open(filename, "r") do |file|
+          obj = Marshal.load(file)
+        end
+        return obj
+      rescue
+        if filename.nil?
+          puts "No File specified."
+        else
+          puts "File #{filename} does not exists."
+        end
+        exit(0)
       end
-      return obj
     end
 
     def serialize(filename)
